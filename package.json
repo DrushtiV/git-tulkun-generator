@@ -1,0 +1,10 @@
+{
+  "name": "git-tulkun-generator",
+  "version": "1.0.0",
+  "description": "Automated dynamic SVG ecosystem generator for GitHub profile",
+  "main": "generate-tulkun.js",
+  "scripts": {
+    "start": "node generate-tulkun.js"
+  },
+  "dependencies": {}
+}
