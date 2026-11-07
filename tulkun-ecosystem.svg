@@ -1,27 +1,124 @@
-<svg width="800" height="300" xmlns="http://www.w3.org/2000/svg">
+
+  <svg width="850" height="340" viewBox="0 0 850 340" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <!-- Deep Ocean Background Gradient -->
+      <linearGradient id="oceanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#0a0d14"/>
+        <stop offset="50%" stop-color="#0f172a"/>
+        <stop offset="100%" stop-color="#060911"/>
+      </linearGradient>
+
+      <!-- Ocean Plants Gradient -->
+      <linearGradient id="plantGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" stop-color="#064e3b"/>
+        <stop offset="100%" stop-color="#34d399"/>
+      </linearGradient>
+
+      <!-- Metallic Body Shader -->
+      <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#1e293b"/>
+        <stop offset="40%" stop-color="#3572A5"/>
+        <stop offset="100%" stop-color="#0f172a"/>
+      </linearGradient>
+
+      <!-- Head Visor Gradient -->
+      <linearGradient id="headGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#F7DF1E"/>
+        <stop offset="100%" stop-color="#ffffff"/>
+      </linearGradient>
+
+      <!-- Bioluminescent Glow Filter -->
+      <filter id="creatureGlow" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="8" result="blur" />
+        <feComponentTransfer in="blur" result="glow">
+          <feFuncA type="linear" slope="0.2"/>
+        </feComponentTransfer>
+        <feMerge>
+          <feMergeNode in="glow"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+
     <style>
-      .ocean { fill: #0d1117; }
-      .tulkun-glow { filter: drop-shadow(0px 0px 14px #3572a5); opacity: 0.2; }
-      .swimming { animation: swim 14s ease-in-out infinite alternate; }
-      @keyframes swim {
-        0% { transform: translate(0px, 45px) rotate(0deg); }
-        100% { transform: translate(35px, 55px) rotate(1deg); }
+      .ocean-bg { fill: url(#oceanGrad); }
+      .tulkun-shadow { filter: url(#creatureGlow); }
+      .swimming-main { animation: floatSwim 12s ease-in-out infinite alternate; }
+      .swimming-companion { animation: floatSwim 12s ease-in-out infinite alternate; animation-delay: -1.8s; }
+      .tail-beat { transform-origin: 50px 60px; animation: tailWag 1.8s ease-in-out infinite alternate; }
+
+      @keyframes floatSwim {
+        0% { transform: translate(260px, 90px) rotate(0deg); }
+        50% { transform: translate(290px, 100px) rotate(1deg); }
+        100% { transform: translate(310px, 95px) rotate(2deg); }
+      }
+
+      @keyframes tailWag {
+        0% { transform: rotate(-5deg); }
+        100% { transform: rotate(8deg); }
       }
     </style>
 
-    <rect width="800" height="300" class="ocean" rx="12" />
-    <g></g>
+    <!-- Canvas Background -->
+    <rect width="850" height="340" rx="14" class="ocean-bg" stroke="#1e293b" stroke-width="2"/>
+
+    <!-- Dynamic Ocean Plants -->
+    <g>
+      <path d="M40 320 C20 220, 65 160, 35 120" 
+            stroke="url(#plantGrad)" stroke-width="4.5" fill="none" opacity="0.75" />
+    
+      <path d="M95 320 C75 255, 120 195, 90 155" 
+            stroke="url(#plantGrad)" stroke-width="4.5" fill="none" opacity="0.75" />
+    
+      <path d="M150 320 C130 290, 175 230, 145 190" 
+            stroke="url(#plantGrad)" stroke-width="4.5" fill="none" opacity="0.75" />
+    </g>
+
+    <!-- Companion Tulkun -->
     
 
-    <!-- Main Dynamic Tulkun -->
-    <g class="swimming tulkun-glow" transform="translate(300, 80) scale(0.75)">
-      <!-- Body -->
-      <ellipse cx="120" cy="60" rx="90" ry="40" fill="#3572a5" />
-      <!-- Underbelly & Fins -->
-      <path d="M 40 60 Q 120 110 200 60 Z" fill="#f1e05a" />
-      <polygon points="120,60 70,130 140,80" fill="#e34c26" />
-      <polygon points="30,60 0,15 0,105" fill="#f1e05a" />
-      <!-- Eye -->
-      <circle cx="180" cy="50" r="5" fill="#666666" />
+    <!-- Main High-Detail Realistic Tulkun -->
+    <g class="swimming-main tulkun-shadow" transform="translate(260, 40) scale(0.8)">
+      <!-- Main Body Core -->
+      <path d="M 50 60 Q 150 -10 270 50 Q 150 120 50 60 Z" fill="url(#bodyGrad)" stroke="#334155" stroke-width="2"/>
+      
+      <!-- Underbelly & Ridge Textures -->
+      <path d="M 80 60 Q 160 105 250 55 Q 160 75 80 60 Z" fill="#f8fafc" opacity="0.88"/>
+      <path d="M 120 62 Q 160 90 210 58" stroke="#E34C26" stroke-width="3.5" fill="none" stroke-dasharray="6,4"/>
+
+      <!-- Head Crest & Visor (Language 2 Color) -->
+      <path d="M 200 24 Q 240 20 270 50 Q 220 40 200 24 Z" fill="url(#headGrad)"/>
+      <ellipse cx="230" cy="38" rx="8" ry="4" fill="#ffffff" opacity="0.7"/>
+
+      <!-- Bioluminescent Dots along the Torso -->
+      <circle cx="170" cy="45" r="3.5" fill="#38bdf8"/>
+      <circle cx="150" cy="47" r="3" fill="#38bdf8"/>
+      <circle cx="130" cy="50" r="2.5" fill="#38bdf8"/>
+
+      <!-- Large Pectoral Fin -->
+      <g transform="rotate(15, 150, 60)">
+        <path d="M 150 60 L 90 145 C 110 145, 150 120, 175 75 Z" fill="url(#bodyGrad)" stroke="#475569" stroke-width="1.5"/>
+        <path d="M 140 65 L 95 135" stroke="#E34C26" stroke-width="2" opacity="0.8"/>
+      </g>
+
+      <!-- Rear Secondary Fins -->
+      <polygon points="100,60 65,95 110,72" fill="#3572A5" opacity="0.9"/>
+      <polygon points="100,55 70,25 110,48" fill="#3572A5" opacity="0.9"/>
+
+      <!-- Articulated Tail Fin -->
+      <g class="tail-beat">
+        <path d="M 55 60 L 5 10 C 15 45, 15 75, 5 110 Z" fill="url(#bodyGrad)" stroke="#334155" stroke-width="1.5"/>
+        <path d="M 45 60 L 15 25 M 45 60 L 15 95" stroke="#F7DF1E" stroke-width="2" opacity="0.7"/>
+      </g>
+
+      <!-- Eye (Dark when resting, luminous when active) -->
+      <circle cx="245" cy="44" r="4.5" fill="#475569"/>
+      <circle cx="246" cy="43" r="1.5" fill="#ffffff"/>
     </g>
+
+    <!-- Status Metadata Banner -->
+    <text x="25" y="315" fill="#94a3b8" font-family="monospace" font-size="12">
+      @DrushtiV • 0 Commits (Resting Mode 💤)
+    </text>
   </svg>
+  
