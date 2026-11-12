@@ -2,7 +2,6 @@ const fs = require('fs');
 
 const GITHUB_USERNAME = 'DrushtiV';
 
-// Vibrant hex mappings for programming languages
 const LANGUAGE_COLORS = {
   Python: '#3572A5',
   JavaScript: '#F7DF1E',
@@ -10,9 +9,10 @@ const LANGUAGE_COLORS = {
   HTML: '#E34C26',
   CSS: '#563D7C',
   Rust: '#DEA584',
-  Cplusplus: '#F34B7D',
+  'C++': '#F34B7D',
   Java: '#B07219',
-  Go: '#00ADD8'
+  Go: '#00ADD8',
+  Jupyter: '#DA5B0B'
 };
 
 async function fetchGitHubData() {
@@ -22,10 +22,15 @@ async function fetchGitHubData() {
   }
 
   let langCounts = {};
+  let totalRepos = 0;
+  let lastPushDate = null;
+
   try {
-    const reposRes = await fetch(`https://api.github.com/users/${GITHUB_USERNAME}/repos?per_page=100`, { headers });
+    const reposRes = await fetch(`https://api.github.com/users/${GITHUB_USERNAME}/repos?per_page=100&sort=pushed`, { headers });
     const repos = await reposRes.json();
     if (Array.isArray(repos)) {
+      totalRepos = repos.length;
+      if (repos[0]?.pushed_at) lastPushDate = new Date(repos[0].pushed_at);
       repos.forEach(repo => {
         if (repo.language) {
           langCounts[repo.language] = (langCounts[repo.language] || 0) + 1;
@@ -37,15 +42,15 @@ async function fetchGitHubData() {
   }
 
   let recentCommits = 0;
-  let lastCommitDate = null;
   try {
-    const eventsRes = await fetch(`https://api.github.com/users/${GITHUB_USERNAME}/events/public`, { headers });
+    const eventsRes = await fetch(`https://api.github.com/users/${GITHUB_USERNAME}/events/public?per_page=100`, { headers });
     const events = await eventsRes.json();
     if (Array.isArray(events)) {
       const pushEvents = events.filter(e => e.type === 'PushEvent');
-      if (pushEvents.length > 0) {
-        lastCommitDate = new Date(pushEvents[0].created_at);
-        recentCommits = pushEvents.reduce((acc, ev) => acc + (ev.payload.commits ? ev.payload.commits.length : 1), 0);
+      recentCommits = pushEvents.reduce((acc, ev) => acc + (ev.payload?.commits?.length || 1), 0);
+      if (pushEvents[0]?.created_at) {
+        const d = new Date(pushEvents[0].created_at);
+        if (!lastPushDate || d > lastPushDate) lastPushDate = d;
       }
     }
   } catch (err) {
@@ -53,172 +58,192 @@ async function fetchGitHubData() {
   }
 
   const now = new Date();
-  const hoursSinceLastCommit = lastCommitDate ? (now - lastCommitDate) / (1000 * 60 * 60) : 999;
-  const isResting = hoursSinceLastCommit > 48;
+  const hoursInactive = lastPushDate ? (now - lastPushDate) / (1000 * 60 * 60) : 0;
+  const isResting = hoursInactive > 120;
+  const activityScore = Math.max(recentCommits, Math.min(totalRepos, 12));
 
-  return { langCounts, recentCommits, isResting };
+  return { langCounts, recentCommits, totalRepos, activityScore, isResting };
+}
+
+// Renders a crisp pixel-art top-down Showa Koi
+function renderPixelKoi(primaryPatch, secondaryPatch, finTint, scale, isShadow = false) {
+  // 28x44 pixel grid representing a top-down curved Koi
+  // Legend:
+  // . = transparent
+  // W = pearl white body
+  // S = ice-blue shading
+  // K = deep sumi black patch
+  // R = primary language patch (e.g., coral red / python blue)
+  // Y = secondary language patch (e.g., JS gold)
+  // F = translucent ice-blue fin
+  // E = eye
+  const grid = [
+    "...........FF...............",
+    "..........FFFF..............",
+    "..........FFFFF........FF...",
+    ".........FFFFFFF......FFFF..",
+    ".........FFFFFFFF....FFFFF..",
+    ".........FFFFFFFFF..FFFFFF..",
+    "..........FFFFFFFFFFFFFFFF..",
+    "..........FFFFFFFFFFFFFFF...",
+    "...........FFFFFFFFFFFFF....",
+    "............FFFFFFFFFFF.....",
+    ".............WWWWWWWWW......",
+    ".............WKKKKKKWW......",
+    "..............WKKKKWSS......",
+    "..............WWWWWSSS......",
+    "...............WRRWWSS......",
+    "...............WRRWKSS......",
+    "...............WWKKKSS......",
+    "...............WKKKKSS......",
+    "..............WWKKKKSS......",
+    "............FFWWWWWWSS......",
+    "...........FFFWWYYYWWSS.....",
+    "..........FFFFWYYYYWWSS.....",
+    ".........FFFFFWWYYKKWSS.....",
+    ".........FFFFFWWKKKKWSS.....",
+    "........FFFFFFWWKKKKWSS.....",
+    "........FFFFFFWWKKKKWSS.....",
+    "........FFFFFWWWWKKWWSS.....",
+    "........FFFFFWWWWWWWWSS.....",
+    ".........FFFWWWWWWWWSSS.....",
+    "..........FFWWRRRRRWSSS.....",
+    "...........WWWRRRRRRWSS.....",
+    "..........EWWWRRRRRRWWSE....",
+    "..........WWWRRRRRRRWWSS....",
+    "..........WWWWWRRRRWWWSS....",
+    "..........WWWWWWWWWWWWSS....",
+    "...........WWWWWWWWWWSS.....",
+    "............WWWWWWWWSS......",
+    "..........F..WWWWWWSS..F....",
+    ".........F....WWWWSS....F...",
+    "........F................F.."
+  ];
+
+  const palette = isShadow
+    ? { W: '#062c54', S: '#062c54', K: '#062c54', R: '#062c54', Y: '#062c54', F: '#062c54', E: '#062c54' }
+    : {
+        W: '#f8fafc',
+        S: '#bae6fd',
+        K: '#0f172a',
+        R: primaryPatch,
+        Y: secondaryPatch,
+        F: finTint,
+        E: '#020617'
+      };
+
+  const pSize = 5 * scale;
+  let rects = '';
+  for (let y = 0; y < grid.length; y++) {
+    for (let x = 0; x < grid[y].length; x++) {
+      const ch = grid[y][x];
+      if (ch !== '.' && palette[ch]) {
+        rects += `<rect x="${x * pSize}" y="${y * pSize}" width="${pSize}" height="${pSize}" fill="${palette[ch]}" />`;
+      }
+    }
+  }
+  return rects;
 }
 
 function buildSVG(data) {
-  const { langCounts, recentCommits, isResting } = data;
+  const { langCounts, totalRepos, activityScore, isResting } = data;
 
   const sortedLangs = Object.keys(langCounts).sort((a, b) => langCounts[b] - langCounts[a]);
-  const primaryColor = LANGUAGE_COLORS[sortedLangs[0]] || '#3572A5'; // Main body (e.g. Python blue)
-  const headColor = LANGUAGE_COLORS[sortedLangs[1]] || '#F7DF1E';    // Head visor (e.g. JS yellow)
-  const bellyColor = LANGUAGE_COLORS[sortedLangs[2]] || '#E34C26';   // Accent markings (e.g. HTML orange)
+  const lang1Color = LANGUAGE_COLORS[sortedLangs[0]] || '#e34c26'; // Coral Red / Python Blue
+  const lang2Color = LANGUAGE_COLORS[sortedLangs[1]] || '#f7df1e'; // JS Yellow / Gold
+  const scale = isResting ? 0.85 : Math.min(1.25, 0.95 + activityScore * 0.02);
+  const swimSpeed = isResting ? '10s' : `${Math.max(3.5, 6.5 - activityScore * 0.15)}s`;
 
-  const scale = isResting ? 0.8 : Math.min(1.35, 0.95 + recentCommits * 0.03);
-  const glowOpacity = isResting ? 0.2 : Math.min(0.95, 0.4 + recentCommits * 0.08);
-  const swimSpeed = isResting ? '12s' : `${Math.max(2.8, 6.0 - recentCommits * 0.15)}s`;
-
-  // Dynamic ocean flora based on commit activity
-  let plantsHTML = '';
-  const plantCount = Math.min(14, 3 + Math.floor(recentCommits / 2));
-  for (let i = 0; i < plantCount; i++) {
-    const xPos = 40 + i * 55;
-    const height = 180 + (i % 3) * 35;
-    plantsHTML += `
-      <path d="M${xPos} 320 C${xPos - 20} ${height + 40}, ${xPos + 25} ${height - 20}, ${xPos - 5} ${height - 60}" 
-            stroke="url(#plantGrad)" stroke-width="4.5" fill="none" opacity="0.75" />
-    `;
-  }
-
-  // Companion Baby Tulkun (Unlocks with higher commits)
-  let babyHTML = '';
-  if (recentCommits > 6) {
-    babyHTML = `
-      <g transform="translate(130, 190) scale(0.42)" class="swimming-companion">
-        <path d="M 40 50 Q 120 10 210 50 Q 120 90 40 50 Z" fill="${headColor}" />
-        <path d="M 70 50 Q 130 85 200 50 Q 130 65 70 50 Z" fill="${primaryColor}" />
-        <polygon points="120,55 60,110 140,75" fill="${primaryColor}" opacity="0.9"/>
-        <polygon points="40,50 0,10 0,90" fill="${bellyColor}" />
-        <circle cx="185" cy="42" r="5" fill="#FFFFFF" />
+  // Pixelated pond water grid pattern + lily pads based on commits
+  let lilyPads = '';
+  const padCount = Math.min(6, 2 + Math.floor(activityScore / 3));
+  const padCoords = [
+    [95, 75], [730, 90], [110, 260], [710, 255], [220, 55], [620, 275]
+  ];
+  for (let i = 0; i < padCount; i++) {
+    const [px, py] = padCoords[i];
+    lilyPads += `
+      <g transform="translate(${px}, ${py})" shape-rendering="crispEdges" opacity="0.85">
+        <rect x="-15" y="-10" width="30" height="20" fill="#15803d"/>
+        <rect x="-10" y="-15" width="20" height="30" fill="#15803d"/>
+        <rect x="-10" y="-10" width="15" height="15" fill="#22c55e"/>
+        <rect x="0" y="0" width="10" height="5" fill="#0d6efd"/>
       </g>
     `;
   }
 
-  return `
-  <svg width="850" height="340" viewBox="0 0 850 340" xmlns="http://www.w3.org/2000/svg">
+  // Companion Baby Pixel Koi (spawns when active)
+  const babyKoi = activityScore >= 4 ? `
+    <g class="baby-swim">
+      <g transform="translate(14, 14)" opacity="0.45">${renderPixelKoi(lang2Color, lang1Color, '#7dd3fc', 0.45, true)}</g>
+      <g>${renderPixelKoi(lang2Color, lang1Color, '#bae6fd', 0.45, false)}</g>
+    </g>
+  ` : '';
+
+  return `<svg width="850" height="340" viewBox="0 0 850 340" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <!-- Deep Ocean Background Gradient -->
-      <linearGradient id="oceanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stop-color="#0a0d14"/>
-        <stop offset="50%" stop-color="#0f172a"/>
-        <stop offset="100%" stop-color="#060911"/>
-      </linearGradient>
-
-      <!-- Ocean Plants Gradient -->
-      <linearGradient id="plantGrad" x1="0%" y1="100%" x2="0%" y2="0%">
-        <stop offset="0%" stop-color="#064e3b"/>
-        <stop offset="100%" stop-color="#34d399"/>
-      </linearGradient>
-
-      <!-- Metallic Body Shader -->
-      <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#1e293b"/>
-        <stop offset="40%" stop-color="${primaryColor}"/>
-        <stop offset="100%" stop-color="#0f172a"/>
-      </linearGradient>
-
-      <!-- Head Visor Gradient -->
-      <linearGradient id="headGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="${headColor}"/>
-        <stop offset="100%" stop-color="#ffffff"/>
-      </linearGradient>
-
-      <!-- Bioluminescent Glow Filter -->
-      <filter id="creatureGlow" x="-30%" y="-30%" width="160%" height="160%">
-        <feGaussianBlur stdDeviation="8" result="blur" />
-        <feComponentTransfer in="blur" result="glow">
-          <feFuncA type="linear" slope="${glowOpacity}"/>
-        </feComponentTransfer>
-        <feMerge>
-          <feMergeNode in="glow"/>
-          <feMergeNode in="SourceGraphic"/>
-        </feMerge>
-      </filter>
+      <!-- Pixel-grid blue pond texture matching reference -->
+      <pattern id="pixelPond" width="6" height="6" patternUnits="userSpaceOnUse">
+        <rect width="6" height="6" fill="#0b69b8"/>
+        <rect x="0" y="0" width="5" height="5" fill="#0e76cd"/>
+      </pattern>
     </defs>
 
     <style>
-      .ocean-bg { fill: url(#oceanGrad); }
-      .tulkun-shadow { filter: url(#creatureGlow); }
-      .swimming-main { animation: floatSwim ${swimSpeed} ease-in-out infinite alternate; }
-      .swimming-companion { animation: floatSwim ${swimSpeed} ease-in-out infinite alternate; animation-delay: -1.8s; }
-      .tail-beat { transform-origin: 50px 60px; animation: tailWag 1.8s ease-in-out infinite alternate; }
-
-      @keyframes floatSwim {
-        0% { transform: translate(260px, ${isResting ? '90px' : '40px'}) rotate(0deg); }
-        50% { transform: translate(290px, ${isResting ? '100px' : '20px'}) rotate(${isResting ? '1deg' : '-2deg'}); }
-        100% { transform: translate(310px, ${isResting ? '95px' : '35px'}) rotate(${isResting ? '2deg' : '-3.5deg'}); }
+      .koi-swim {
+        animation: koiGlide ${swimSpeed} ease-in-out infinite alternate;
       }
-
-      @keyframes tailWag {
-        0% { transform: rotate(-5deg); }
-        100% { transform: rotate(8deg); }
+      .baby-swim {
+        animation: babyGlide ${swimSpeed} ease-in-out infinite alternate;
+      }
+      @keyframes koiGlide {
+        0%   { transform: translate(345px, ${isResting ? '85px' : '55px'}) rotate(-12deg); }
+        50%  { transform: translate(365px, ${isResting ? '90px' : '42px'}) rotate(-8deg); }
+        100% { transform: translate(385px, ${isResting ? '88px' : '52px'}) rotate(-15deg); }
+      }
+      @keyframes babyGlide {
+        0%   { transform: translate(195px, 165px) rotate(-18deg); }
+        100% { transform: translate(220px, 150px) rotate(-10deg); }
       }
     </style>
 
-    <!-- Canvas Background -->
-    <rect width="850" height="340" rx="14" class="ocean-bg" stroke="#1e293b" stroke-width="2"/>
+    <!-- Textured Blue Pond Backdrop -->
+    <rect width="850" height="340" rx="14" fill="url(#pixelPond)" stroke="#074a85" stroke-width="3"/>
 
-    <!-- Dynamic Ocean Plants -->
-    <g>${plantsHTML}</g>
+    <!-- Water Ripples -->
+    <ellipse cx="425" cy="170" rx="220" ry="95" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-dasharray="8,6" opacity="0.25">
+      <animate attributeName="rx" values="200;245;200" dur="5s" repeatCount="indefinite"/>
+      <animate attributeName="ry" values="85;110;85" dur="5s" repeatCount="indefinite"/>
+    </ellipse>
 
-    <!-- Companion Tulkun -->
-    ${babyHTML}
+    ${lilyPads}
+    ${babyKoi}
 
-    <!-- Main High-Detail Realistic Tulkun -->
-    <g class="swimming-main tulkun-shadow" transform="translate(260, 40) scale(${scale})">
-      <!-- Main Body Core -->
-      <path d="M 50 60 Q 150 -10 270 50 Q 150 120 50 60 Z" fill="url(#bodyGrad)" stroke="#334155" stroke-width="2"/>
-      
-      <!-- Underbelly & Ridge Textures -->
-      <path d="M 80 60 Q 160 105 250 55 Q 160 75 80 60 Z" fill="#f8fafc" opacity="0.88"/>
-      <path d="M 120 62 Q 160 90 210 58" stroke="${bellyColor}" stroke-width="3.5" fill="none" stroke-dasharray="6,4"/>
-
-      <!-- Head Crest & Visor (Language 2 Color) -->
-      <path d="M 200 24 Q 240 20 270 50 Q 220 40 200 24 Z" fill="url(#headGrad)"/>
-      <ellipse cx="230" cy="38" rx="8" ry="4" fill="#ffffff" opacity="0.7"/>
-
-      <!-- Bioluminescent Dots along the Torso -->
-      <circle cx="170" cy="45" r="3.5" fill="#38bdf8"/>
-      <circle cx="150" cy="47" r="3" fill="#38bdf8"/>
-      <circle cx="130" cy="50" r="2.5" fill="#38bdf8"/>
-
-      <!-- Large Pectoral Fin -->
-      <g transform="rotate(${isResting ? '15' : '-5'}, 150, 60)">
-        <path d="M 150 60 L 90 145 C 110 145, 150 120, 175 75 Z" fill="url(#bodyGrad)" stroke="#475569" stroke-width="1.5"/>
-        <path d="M 140 65 L 95 135" stroke="${bellyColor}" stroke-width="2" opacity="0.8"/>
+    <!-- Main Top-Down Pixel Showa Koi -->
+    <g class="koi-swim" shape-rendering="crispEdges">
+      <!-- Cast Pond Shadow -->
+      <g transform="translate(22, 24)" opacity="0.55">
+        ${renderPixelKoi(lang1Color, lang2Color, '#7dd3fc', scale, true)}
       </g>
-
-      <!-- Rear Secondary Fins -->
-      <polygon points="100,60 65,95 110,72" fill="${primaryColor}" opacity="0.9"/>
-      <polygon points="100,55 70,25 110,48" fill="${primaryColor}" opacity="0.9"/>
-
-      <!-- Articulated Tail Fin -->
-      <g class="tail-beat">
-        <path d="M 55 60 L 5 10 C 15 45, 15 75, 5 110 Z" fill="url(#bodyGrad)" stroke="#334155" stroke-width="1.5"/>
-        <path d="M 45 60 L 15 25 M 45 60 L 15 95" stroke="${headColor}" stroke-width="2" opacity="0.7"/>
+      <!-- Koi Body & Translucent Fins -->
+      <g>
+        ${renderPixelKoi(lang1Color, lang2Color, '#bae6fd', scale, false)}
       </g>
-
-      <!-- Eye (Dark when resting, luminous when active) -->
-      <circle cx="245" cy="44" r="4.5" fill="${isResting ? '#475569' : '#0284c7'}"/>
-      <circle cx="246" cy="43" r="1.5" fill="#ffffff"/>
     </g>
 
-    <!-- Status Metadata Banner -->
-    <text x="25" y="315" fill="#94a3b8" font-family="monospace" font-size="12">
-      @${GITHUB_USERNAME} • ${recentCommits} Commits (${isResting ? 'Resting Mode 💤' : 'Active Swimming ⚡'})
+    <!-- Crisp Pixel Status Footer -->
+    <rect x="16" y="302" width="818" height="24" rx="6" fill="#062c54" opacity="0.82"/>
+    <text x="28" y="318" fill="#e0f2fe" font-family="monospace" font-size="12" font-weight="bold">
+      @${GITHUB_USERNAME} • ${totalRepos} Repos • Colors: ${sortedLangs.slice(0, 3).join(', ') || 'Python, JS, HTML'} • ${isResting ? 'Resting 💤' : 'Swimming ⚡'}
     </text>
-  </svg>
-  `;
+  </svg>`;
 }
 
 async function run() {
   const data = await fetchGitHubData();
   const svgContent = buildSVG(data);
   fs.writeFileSync('tulkun-ecosystem.svg', svgContent);
-  console.log('Successfully generated high-detail tulkun-ecosystem.svg!');
+  console.log('Generated Pixel-Art Showa Koi SVG!');
 }
 
 run();
